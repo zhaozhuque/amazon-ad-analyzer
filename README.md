@@ -1,2 +1,58 @@
-# amazon-ad-analyzer
-Amazon Advertising Diagnostic Tool - With just a few clicks, you can analyze advertising reports by uploading a few simple official data tables, and it will help you make judgments. Ideal for beginners.亚马逊广告诊断工具 - 一键分析广告报告
+# 亚马逊广告诊断工具 v1.0
+
+## 📌 这是什么？
+一键分析你的亚马逊广告报告，自动找出烧钱词、优质词、高ACoS词等，
+生成专业的Excel诊断报告。**完全离线运行，不需要联网。**
+
+## 🚀 首次使用（3步搞定）
+
+### 第1步：安装 Python
+1. 打开 https://www.python.org/downloads/
+2. 点击黄色按钮 "Download Python 3.x.x"
+3. 运行安装程序，**务必勾选底部 "Add Python to PATH"** ✅
+4. 点 "Install Now"
+
+### 第2步：双击 `启动诊断工具.bat`
+- 首次运行会自动安装 pandas 和 openpyxl（约30秒）
+- 之后每次启动都是秒开
+
+### 第3步：选择文件 → 点击诊断
+1. 点"选择文件"，选你从亚马逊后台下载的报告
+2. 点"开始诊断"
+3. 报告自动生成在原文件同目录下
+
+## 📂 文件说明
+```
+亚马逊广告诊断工具.py    ← 主程序（不要删）
+启动诊断工具.bat         ← 双击这个启动
+README.md               ← 本说明文件
+```
+
+## 📊 支持的报告类型
+- ✅ 商品推广 - 搜索词报告（.xlsx / .csv）
+- ✅ 商品推广 - 推广的商品报告（.xlsx / .csv）
+- ✅ 中文/英文后台报告均可
+- ✅ 同时上传两份或只上传搜索词报告均可
+
+## 📋 诊断报告包含
+| Sheet | 内容 |
+|-------|------|
+| 总览仪表盘 | KPI总览 + 关键词健康分布 + 优化建议 |
+| 烧钱词&否定词 | 花费高无转化的词（红色标记） |
+| 优质词&潜力词 | 转化好的词（绿色标记） |
+| Campaign分析 | 各广告活动效果对比 |
+| 匹配类型分析 | 精准/广泛/自动效果对比 |
+| 推广商品分析 | ASIN维度盈亏分析 |
+| 搜索词明细 | 全部数据+诊断标签 |
+
+## ⚙️ 自定义阈值
+工具界面上可以直接调整：
+- 高ACoS阈值（默认40%）
+- 优质词ACoS上限（默认20%）
+- 烧钱花费阈值（默认$5）
+
+## 🖥️ 命令行模式（高级）
+不想用界面的话，也可以命令行运行：
+```
+python 亚马逊广告诊断工具.py 搜索词报告.xlsx 推广商品报告.xlsx
+```
