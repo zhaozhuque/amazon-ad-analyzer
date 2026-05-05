@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Ad Analyzer - 亚马逊广告诊断工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--surface:#111827;--surface2:#1a2236;
+  --accent:#00e5a0;--accent2:#00c4ff;--accent3:#ff6b35;
+  --red:#ff4757;--orange:#ffa502;--green:#2ed573;--yellow:#ffd43b;
+  --text:#e8edf5;--text2:#8892a4;--text3:#505a6b;
+  --font-display:'DM Sans','Noto Sans SC',sans-serif;
+  --font-mono:'Space Mono',monospace;
+  --font-body:'Noto Sans SC','DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);overflow-x:hidden}
+
+/* ═══ NAV ═══ */
+nav{position:fixed;top:0;width:100%;z-index:100;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(20px);background:rgba(10,14,23,.8);border-bottom:1px solid rgba(255,255,255,.05)}
+.logo{font-family:var(--font-display);font-weight:700;font-size:1.2rem;color:var(--accent);display:flex;align-items:center;gap:.5rem}
+.logo span{color:var(--text)}
+.nav-links{display:flex;gap:2rem;align-items:center}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:.9rem;transition:.3s}
+.nav-links a:hover{color:var(--accent)}
+.btn-nav{background:var(--accent);color:var(--bg);padding:.5rem 1.2rem;border-radius:6px;font-weight:700;font-size:.85rem;text-decoration:none;transition:.3s}
+.btn-nav:hover{box-shadow:0 0 25px rgba(0,229,160,.4);transform:translateY(-1px)}
+
+/* ═══ HERO ═══ */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:8rem 2rem 4rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,229,160,.08) 0%,transparent 70%);top:-100px;right:-200px;pointer-events:none}
+.hero::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(0,196,255,.06) 0%,transparent 70%);bottom:-100px;left:-200px;pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:.4rem 1rem;border-radius:50px;font-size:.8rem;color:var(--accent);margin-bottom:2rem;font-family:var(--font-mono);animation:fadeUp .8s ease}
+.badge::before{content:'';width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-family:var(--font-display);font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;line-height:1.1;margin-bottom:1.5rem;animation:fadeUp .8s ease .1s both}
+h1 .highlight{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:1.2rem;color:var(--text2);max-width:600px;line-height:1.8;margin-bottom:3rem;animation:fadeUp .8s ease .2s both;font-weight:300}
+.hero-cta{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;animation:fadeUp .8s ease .3s both}
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,var(--accent),#00c48c);color:var(--bg);padding:.9rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;text-decoration:none;transition:.3s;font-family:var(--font-body)}
+.btn-primary:hover{box-shadow:0 0 40px rgba(0,229,160,.3);transform:translateY(-2px)}
+.btn-secondary{display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:var(--text);padding:.9rem 2rem;border-radius:8px;font-weight:500;font-size:1rem;text-decoration:none;border:1px solid var(--text3);transition:.3s}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ STATS BAR ═══ */
+.stats-bar{display:flex;justify-content:center;gap:3rem;padding:2rem;flex-wrap:wrap;animation:fadeUp .8s ease .4s both}
+.stat{text-align:center}
+.stat-num{font-family:var(--font-mono);font-size:2rem;font-weight:700;color:var(--accent)}
+.stat-label{font-size:.8rem;color:var(--text3);margin-top:.3rem}
+
+/* ═══ DEMO SECTION ═══ */
+.demo{padding:4rem 2rem;max-width:1100px;margin:0 auto}
+.demo-title{text-align:center;margin-bottom:3rem}
+.demo-title h2{font-family:var(--font-display);font-size:2rem;margin-bottom:.5rem}
+.demo-title p{color:var(--text2)}
+.demo-window{background:var(--surface);border-radius:16px;border:1px solid rgba(255,255,255,.06);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.demo-toolbar{display:flex;align-items:center;gap:.5rem;padding:.8rem 1.2rem;background:var(--surface2);border-bottom:1px solid rgba(255,255,255,.05)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--text3)}
+.dot:nth-child(1){background:var(--red)}
+.dot:nth-child(2){background:var(--yellow)}
+.dot:nth-child(3){background:var(--green)}
+.demo-toolbar span{margin-left:auto;font-size:.75rem;color:var(--text3);font-family:var(--font-mono)}
+.demo-content{padding:2rem;display:grid;gap:1.5rem}
+
+/* Mock KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem}
+.kpi{background:var(--surface2);border-radius:10px;padding:1rem;border:1px solid rgba(255,255,255,.04)}
+.kpi-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;font-family:var(--font-mono);letter-spacing:.5px}
+.kpi-value{font-family:var(--font-mono);font-size:1.4rem;font-weight:700;margin-top:.3rem}
+.kpi-value.red{color:var(--red)}
+.kpi-value.green{color:var(--green)}
+.kpi-value.orange{color:var(--orange)}
+.kpi-value.blue{color:var(--accent2)}
+
+/* Mock table */
+.mock-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.mock-table th{text-align:left;padding:.6rem .8rem;color:var(--text3);font-family:var(--font-mono);font-size:.7rem;border-bottom:1px solid rgba(255,255,255,.06);text-transform:uppercase;letter-spacing:.5px}
+.mock-table td{padding:.6rem .8rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:700}
+.tag-red{background:rgba(255,71,87,.15);color:var(--red)}
+.tag-green{background:rgba(46,213,115,.15);color:var(--green)}
+.tag-yellow{background:rgba(255,212,59,.15);color:var(--yellow)}
+.tag-orange{background:rgba(255,165,2,.15);color:var(--orange)}
+
+/* ═══ FEATURES ═══ */
+.features{padding:6rem 2rem;max-width:1100px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:4rem}
+.section-header h2{font-family:var(--font-display);font-size:2.5rem;margin-bottom:.8rem}
+.section-header p{color:var(--text2);max-width:500px;margin:0 auto;font-weight:300}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem}
+.feature-card{background:var(--surface);border-radius:14px;padding:2rem;border:1px solid rgba(255,255,255,.04);transition:.3s;position:relative;overflow:hidden}
+.feature-card:hover{border-color:rgba(0,229,160,.2);transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.feature-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.2rem}
+.feature-card h3{font-family:var(--font-display);font-size:1.1rem;margin-bottom:.6rem}
+.feature-card p{color:var(--text2);font-size:.9rem;line-height:1.6;font-weight:300}
+.fi-1{background:rgba(255,71,87,.1)}
+.fi-2{background:rgba(46,213,115,.1)}
+.fi-3{background:rgba(0,196,255,.1)}
+.fi-4{background:rgba(255,165,2,.1)}
+.fi-5{background:rgba(255,212,59,.1)}
+.fi-6{background:rgba(0,229,160,.1)}
+
+/* ═══ HOW IT WORKS ═══ */
+.how{padding:6rem 2rem;background:var(--surface);border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04)}
+.how-inner{max-width:900px;margin:0 auto}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:3rem}
+.step{text-align:center;position:relative}
+.step-num{font-family:var(--font-mono);font-size:3rem;font-weight:700;color:var(--accent);opacity:.3;line-height:1}
+.step h3{font-family:var(--font-display);margin:.8rem 0 .5rem;font-size:1.1rem}
+.step p{color:var(--text2);font-size:.85rem;font-weight:300;line-height:1.6}
+.step-arrow{position:absolute;right:-1.5rem;top:1.5rem;color:var(--text3);font-size:1.5rem}
+
+/* ═══ PRIVACY ═══ */
+.privacy{padding:4rem 2rem;max-width:800px;margin:0 auto;text-align:center}
+.privacy-box{background:var(--surface);border-radius:14px;padding:2.5rem;border:1px solid rgba(0,229,160,.15)}
+.privacy-box h3{font-family:var(--font-display);font-size:1.3rem;margin-bottom:1rem;color:var(--accent)}
+.privacy-box p{color:var(--text2);font-size:.95rem;line-height:1.8;font-weight:300}
+.privacy-icons{display:flex;justify-content:center;gap:2.5rem;margin-top:1.5rem}
+.privacy-icon{text-align:center}
+.privacy-icon .pi-emoji{font-size:2rem;margin-bottom:.3rem}
+.privacy-icon span{display:block;font-size:.75rem;color:var(--text3)}
+
+/* ═══ CTA ═══ */
+.cta{padding:6rem 2rem;text-align:center}
+.cta h2{font-family:var(--font-display);font-size:2.5rem;margin-bottom:1rem}
+.cta p{color:var(--text2);margin-bottom:2.5rem;font-weight:300;font-size:1.1rem}
+.cta-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn-large{padding:1rem 2.5rem;font-size:1.1rem;border-radius:10px}
+
+/* ═══ FOOTER ═══ */
+footer{padding:3rem 2rem;border-top:1px solid rgba(255,255,255,.04);text-align:center;color:var(--text3);font-size:.8rem}
+footer a{color:var(--accent);text-decoration:none}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  nav{padding:.8rem 1rem}
+  .nav-links a:not(.btn-nav){display:none}
+  .stats-bar{gap:1.5rem}
+  .stat-num{font-size:1.5rem}
+  .steps{grid-template-columns:1fr;gap:2rem}
+  .step-arrow{display:none}
+  .feature-grid{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ═══ ANIMATIONS ═══ */
+.reveal{opacity:0;transform:translateY(40px);transition:.8s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">📊 <span>Amazon Ad Analyzer</span></div>
+  <div class="nav-links">
+    <a href="#features">功能</a>
+    <a href="#how">使用方法</a>
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer" target="_blank">GitHub</a>
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer/releases" target="_blank" class="btn-nav">免费下载</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">● OPEN SOURCE · 完全免费 · 离线运行</div>
+  <h1>你的亚马逊广告<br><span class="highlight">正在烧多少钱？</span></h1>
+  <p class="hero-sub">上传广告报告，3秒诊断全部关键词问题。<br>找出烧钱词、发现优质词、生成专业Excel分析报告。</p>
+  <div class="hero-cta">
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer/releases" target="_blank" class="btn-primary">⬇ 免费下载 EXE</a>
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer" target="_blank" class="btn-secondary">⭐ GitHub 源码</a>
+  </div>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num">5,000+</div><div class="stat-label">可分析关键词</div></div>
+    <div class="stat"><div class="stat-num">7</div><div class="stat-label">维度诊断报告</div></div>
+    <div class="stat"><div class="stat-num">3s</div><div class="stat-label">出结果</div></div>
+    <div class="stat"><div class="stat-num">$0</div><div class="stat-label">完全免费</div></div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo reveal">
+  <div class="demo-title">
+    <h2>一眼看清广告健康状况</h2>
+    <p>自动标注每个关键词的问题类型和优先级</p>
+  </div>
+  <div class="demo-window">
+    <div class="demo-toolbar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>广告诊断报告.xlsx</span>
+    </div>
+    <div class="demo-content">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">总花费</div><div class="kpi-value">$4,832.50</div></div>
+        <div class="kpi"><div class="kpi-label">总销售额</div><div class="kpi-value green">$18,429.00</div></div>
+        <div class="kpi"><div class="kpi-label">整体 ACoS</div><div class="kpi-value orange">26.2%</div></div>
+        <div class="kpi"><div class="kpi-label">烧钱词</div><div class="kpi-value red">126 个</div></div>
+        <div class="kpi"><div class="kpi-label">可节省</div><div class="kpi-value red">$1,198.72</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="mock-table">
+          <tr><th>搜索词</th><th>花费</th><th>订单</th><th>ACoS</th><th>诊断</th><th>优先级</th></tr>
+          <tr><td>bluetooth earbuds case</td><td>$86.40</td><td>0</td><td>—</td><td><span class="tag tag-red">🔴 烧钱词</span></td><td>‼️ 紧急</td></tr>
+          <tr><td>wireless earbuds</td><td>$245.00</td><td>18</td><td>8.2%</td><td><span class="tag tag-green">🟢 优质词</span></td><td>🌟 加投</td></tr>
+          <tr><td>noise cancelling earbuds</td><td>$124.30</td><td>5</td><td>32%</td><td><span class="tag tag-yellow">🟡 潜力词</span></td><td>📌 关注</td></tr>
+          <tr><td>cheap earphones bulk</td><td>$52.10</td><td>0</td><td>—</td><td><span class="tag tag-red">🔴 烧钱词</span></td><td>‼️ 紧急</td></tr>
+          <tr><td>premium tws earbuds</td><td>$98.00</td><td>3</td><td>48%</td><td><span class="tag tag-orange">🟠 高ACoS</span></td><td>⚠️ 高</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features reveal" id="features">
+  <div class="section-header">
+    <h2>全面诊断，一个不漏</h2>
+    <p>六大维度自动分析，告诉你每一分广告费花得值不值</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon fi-1">🔴</div>
+      <h3>烧钱词识别</h3>
+      <p>自动找出花费高但零转化的关键词，告诉你哪些钱白花了，一键否定止损。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-2">🟢</div>
+      <h3>优质词发现</h3>
+      <p>识别低ACoS高转化的赚钱词，建议提高竞价抢占更多流量，放大盈利。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-3">📊</div>
+      <h3>Campaign 分析</h3>
+      <p>按广告活动维度汇总表现，一眼看出哪个Campaign在亏钱、哪个在赚钱。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-4">🟠</div>
+      <h3>高ACoS预警</h3>
+      <p>标记ACoS超标的关键词，提供降低竞价或暂停投放的建议。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-5">🟡</div>
+      <h3>潜力词挖掘</h3>
+      <p>找出ACoS在临界区间的词，通过优化listing和竞价就能变成优质词。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-6">📦</div>
+      <h3>ASIN 盈亏分析</h3>
+      <p>按推广商品维度分析，快速定位哪些ASIN在靠广告亏钱推。</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how reveal" id="how">
+  <div class="how-inner">
+    <div class="section-header">
+      <h2>三步完成诊断</h2>
+      <p>不用注册、不用联网、不用学习</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>下载并打开工具</h3>
+        <p>下载 EXE 文件，双击运行。<br>无需安装 Python 或任何依赖。</p>
+        <span class="step-arrow">→</span>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>上传广告报告</h3>
+        <p>从亚马逊后台下载搜索词报告，<br>选择文件并点击"开始诊断"。</p>
+        <span class="step-arrow">→</span>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>获取诊断Excel</h3>
+        <p>3秒生成7个维度的分析报告，<br>红绿标注一目了然，直接执行。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY -->
+<section class="privacy reveal">
+  <div class="privacy-box">
+    <h3>🔒 你的数据只属于你</h3>
+    <p>所有分析在你的电脑本地完成，广告数据不会上传到任何服务器。<br>代码完全开源，可以自行审查每一行代码。</p>
+    <div class="privacy-icons">
+      <div class="privacy-icon"><div class="pi-emoji">🖥️</div><span>100% 本地运行</span></div>
+      <div class="privacy-icon"><div class="pi-emoji">🚫</div><span>不收集数据</span></div>
+      <div class="privacy-icon"><div class="pi-emoji">📖</div><span>开源可审查</span></div>
+      <div class="privacy-icon"><div class="pi-emoji">🔌</div><span>无需联网</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta reveal">
+  <h2>别再让广告费白烧了</h2>
+  <p>5分钟找出你的广告浪费，今天就开始优化</p>
+  <div class="cta-buttons">
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer/releases" target="_blank" class="btn-primary btn-large">⬇ 免费下载工具</a>
+    <a href="https://github.com/zhaozhuque/amazon-ad-analyzer" target="_blank" class="btn-secondary btn-large">查看源代码 →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>Amazon Ad Analyzer · Built by <a href="https://github.com/zhaozhuque" target="_blank">zhaozhuque</a> · MIT License</p>
+  <p style="margin-top:.5rem">Not affiliated with Amazon. This is an independent open-source tool.</p>
+</footer>
+
+<script>
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, { threshold: 0.15 });
+reveals.forEach(el => observer.observe(el));
+
+// Animate KPI numbers
+function animateNum(el, target, prefix = '', suffix = '') {
+  let current = 0;
+  const step = target / 40;
+  const timer = setInterval(() => {
+    current += step;
+    if (current >= target) { current = target; clearInterval(timer); }
+    el.textContent = prefix + (Number.isInteger(target) ? Math.floor(current).toLocaleString() : current.toFixed(1)) + suffix;
+  }, 30);
+}
+// Trigger on demo visible
+const demoObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const kpis = e.target.querySelectorAll('.kpi-value');
+      if (kpis[0]) animateNum(kpis[0], 4832.50, '$', '');
+      if (kpis[1]) animateNum(kpis[1], 18429, '$', '.00');
+      if (kpis[2]) animateNum(kpis[2], 26.2, '', '%');
+      if (kpis[3]) { let v = kpis[3]; let c = 0; const t = setInterval(() => { c += 4; if(c>=126){c=126;clearInterval(t)} v.textContent = c + ' 个'; }, 20); }
+      if (kpis[4]) animateNum(kpis[4], 1198.72, '$', '');
+      demoObs.disconnect();
+    }
+  });
+}, { threshold: 0.3 });
+const demoEl = document.querySelector('.demo');
+if (demoEl) demoObs.observe(demoEl);
+</script>
+</body>
+</html>
