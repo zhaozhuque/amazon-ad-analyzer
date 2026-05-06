@@ -487,7 +487,160 @@ def build_report(df_st, df_prod, output_path, progress_callback=None):
         ws6.merge_cells(f'A1:{get_column_letter(len(cols6))}1')
         write_sheet(ws6, dp, cols6, 2, color_col='商品诊断')
 
-    # ─── Sheet 7: 完整明细 ───
+    # ─── Sheet 7: 否词推荐 ───
+    log("生成否词推荐...")
+    ws_neg = wb.create_sheet('❌ 否词推荐')
+    ws_neg.sheet_properties.tabColor = '8B0000'
+
+    # 否词筛选逻辑
+    neg_conditions = []
+
+    # 条件1: 花费 >= 阈值 且 0 订单 → 紧急否定
+    c1 = df_kw[(df_kw['Spend'] >= SPEND_THRESHOLD) & (df_kw['Orders'] == 0)].copy()
+    if len(c1) > 0:
+        c1['否定原因'] = c1.apply(lambda r: f'花费${r["Spend"]:.2f}，0转化', axis=1)
+        c1['紧急程度'] = '‼️ 立即否定'
+        c1['建议否定类型'] = '精准否定'
+        neg_conditions.append(c1)
+
+    # 条件2: 点击 >= 阈值 且 0 订单（花费可能低于阈值）
+    c2 = df_kw[(df_kw['Clicks'] >= CLICK_NO_SALE) & (df_kw['Orders'] == 0) &
+               (df_kw['Spend'] < SPEND_THRESHOLD)].copy()
+    if len(c2) > 0:
+        c2['否定原因'] = c2.apply(lambda r: f'{int(r["Clicks"])}次点击0转化', axis=1)
+        c2['紧急程度'] = '⚠️ 建议否定'
+        c2['建议否定类型'] = '精准否定'
+        neg_conditions.append(c2)
+
+    # 条件3: ACoS > 80% 且有订单但严重亏损
+    acos_extreme = 0.80
+    c3 = df_kw[(df_kw['ACoS'] > acos_extreme) & (df_kw['Orders'] > 0)].copy()
+    if len(c3) > 0:
+        c3['否定原因'] = c3.apply(lambda r: f'ACoS={r["ACoS"]:.0%}，严重亏损', axis=1)
+        c3['紧急程度'] = '⚠️ 建议否定'
+        c3['建议否定类型'] = '精准否定'
+        neg_conditions.append(c3)
+
+    # 条件4: 有点击但CTR极低且无转化（流量不精准）
+    c4 = df_kw[(df_kw['Impressions'] > 1000) & (df_kw['Clicks'] >= 3) &
+               (df_kw['Orders'] == 0) & (df_kw['Spend'] < SPEND_THRESHOLD)].copy()
+    if len(c4) > 0:
+        c4_existing = pd.concat(neg_conditions)['SearchTerm'].tolist() if neg_conditions else []
+        c4 = c4[~c4['SearchTerm'].isin(c4_existing)]
+        if len(c4) > 0:
+            c4['否定原因'] = c4.apply(lambda r: f'高曝光({int(r["Impressions"])})+0转化，流量不精准', axis=1)
+            c4['紧急程度'] = '📌 可选否定'
+            c4['建议否定类型'] = '短语否定'
+            neg_conditions.append(c4)
+
+    if neg_conditions:
+        df_neg = pd.concat(neg_conditions, ignore_index=True)
+        df_neg = df_neg.drop_duplicates(subset='SearchTerm', keep='first')
+        df_neg = df_neg.sort_values('Spend', ascending=False)
+    else:
+        df_neg = pd.DataFrame()
+
+    # 写入标题和说明
+    ws_neg.cell(row=1, column=1,
+        value=f'否词推荐清单（共{len(df_neg)}个）— 可直接复制到亚马逊后台添加否定关键词').font = \
+        Font(name='Arial', bold=True, size=12, color='8B0000')
+    ws_neg.merge_cells('A1:J1')
+    ws_neg.cell(row=2, column=1,
+        value='使用方法：复制"搜索词"列 → 亚马逊后台 → 对应Campaign → 否定关键词 → 粘贴添加').font = \
+        Font(name='Arial', size=9, color='666666', italic=True)
+    ws_neg.merge_cells('A2:J2')
+
+    if len(df_neg) > 0:
+        # 汇总统计
+        ws_neg.cell(row=3, column=1,
+            value=f'共可节省预估花费: ${df_neg["Spend"].sum():,.2f}').font = \
+            Font(name='Arial', bold=True, size=10, color='CC0000')
+        ws_neg.merge_cells('A3:D3')
+
+        # 按Campaign分组写入
+        neg_cols = [c for c in ['SearchTerm', 'Campaign', 'AdGroup', 'MatchType',
+                    'Impressions', 'Clicks', 'Spend', 'Orders', 'ACoS',
+                    '否定原因', '紧急程度', '建议否定类型'] if c in df_neg.columns]
+
+        current_row = 5
+        for camp_name, camp_group in df_neg.groupby('Campaign'):
+            camp_group = camp_group.sort_values('Spend', ascending=False)
+            # Campaign header
+            ws_neg.cell(row=current_row, column=1,
+                value=f'📂 {camp_name}（{len(camp_group)}个否定词，花费${camp_group["Spend"].sum():,.2f}）').font = \
+                Font(name='Arial', bold=True, size=10, color='1F4E79')
+            ws_neg.merge_cells(f'A{current_row}:{get_column_letter(len(neg_cols))}{current_row}')
+            ws_neg.cell(row=current_row, column=1).fill = PatternFill('solid', fgColor='E8EDF5')
+            current_row += 1
+
+            # Table header
+            for ci, cn in enumerate(neg_cols, 1):
+                ws_neg.cell(row=current_row, column=ci, value=cn)
+            style_header(ws_neg, current_row, len(neg_cols))
+            current_row += 1
+
+            # Data rows
+            for _, rd in camp_group.iterrows():
+                for ci, cn in enumerate(neg_cols, 1):
+                    v = rd.get(cn, '')
+                    if pd.isna(v): v = '—'
+                    ws_neg.cell(row=current_row, column=ci, value=v)
+                # Color by urgency
+                urg = str(rd.get('紧急程度', ''))
+                fill = None
+                if '立即' in urg: fill = RED_FILL
+                elif '建议' in urg: fill = ORANGE_FILL
+                elif '可选' in urg: fill = YELLOW_FILL
+                if fill:
+                    for ci in range(1, len(neg_cols) + 1):
+                        ws_neg.cell(row=current_row, column=ci).fill = fill
+                current_row += 1
+
+            # Format columns
+            end_r = current_row - 1
+            start_r = end_r - len(camp_group) + 1
+            style_rows(ws_neg, start_r, end_r, len(neg_cols))
+            for ci, cn in enumerate(neg_cols, 1):
+                if cn in ['Spend']: fmt_money(ws_neg, ci, start_r, end_r)
+                elif cn in ['ACoS']: fmt_pct(ws_neg, ci, start_r, end_r)
+                elif cn in ['Impressions', 'Clicks', 'Orders']: fmt_num(ws_neg, ci, start_r, end_r)
+
+            current_row += 1  # blank row between campaigns
+
+        auto_w(ws_neg, len(neg_cols))
+
+        # 最后加一个"纯词列表"区域，方便直接复制
+        ws_neg_list = wb.create_sheet('📋 否定词复制列表')
+        ws_neg_list.sheet_properties.tabColor = '8B0000'
+        ws_neg_list.cell(row=1, column=1, value='否定关键词（直接复制此列）').font = \
+            Font(name='Arial', bold=True, size=11, color='8B0000')
+        ws_neg_list.cell(row=1, column=2, value='所属Campaign').font = \
+            Font(name='Arial', bold=True, size=11, color='8B0000')
+        ws_neg_list.cell(row=1, column=3, value='建议否定类型').font = \
+            Font(name='Arial', bold=True, size=11, color='8B0000')
+        ws_neg_list.cell(row=1, column=4, value='花费').font = \
+            Font(name='Arial', bold=True, size=11, color='8B0000')
+        style_header(ws_neg_list, 1, 4)
+
+        for ri, (_, rd) in enumerate(df_neg.iterrows(), 2):
+            ws_neg_list.cell(row=ri, column=1, value=rd.get('SearchTerm', ''))
+            ws_neg_list.cell(row=ri, column=2, value=rd.get('Campaign', ''))
+            ws_neg_list.cell(row=ri, column=3, value=rd.get('建议否定类型', '精准否定'))
+            ws_neg_list.cell(row=ri, column=4, value=rd.get('Spend', 0))
+            ws_neg_list.cell(row=ri, column=4).number_format = '$#,##0.00'
+        style_rows(ws_neg_list, 2, 1 + len(df_neg), 4)
+        auto_w(ws_neg_list, 4)
+        ws_neg_list.freeze_panes = 'A2'
+
+        neg_count = len(df_neg)
+        neg_waste = df_neg['Spend'].sum()
+    else:
+        ws_neg.cell(row=4, column=1, value='暂无需要否定的关键词').font = \
+            Font(name='Arial', size=11, color='006100')
+        neg_count = 0
+        neg_waste = 0
+
+    # ─── Sheet: 完整明细 ───
     log("生成完整明细...")
     ws7 = wb.create_sheet('搜索词明细')
     ws7.sheet_properties.tabColor = '808080'
@@ -505,7 +658,7 @@ def build_report(df_st, df_prod, output_path, progress_callback=None):
         'total': total_kw, 'burn': burn, 'high_acos': high_a,
         'good': good, 'potential': pot, 'low_ctr': low_c,
         'waste': waste, 'spend': ts, 'sales': tsa, 'orders': to_,
-        'acos': acos_o
+        'acos': acos_o, 'neg_count': neg_count, 'neg_waste': neg_waste
     }
 
 
@@ -672,7 +825,7 @@ class App:
             f"总花费: ${r['spend']:,.2f}  |  总销售: ${r['sales']:,.2f}  |  整体ACoS: {r['acos']:.1%}\n"
             f"🔴 烧钱词: {r['burn']}个  |  🟠 高ACoS: {r['high_acos']}个\n"
             f"🟢 优质词: {r['good']}个  |  🟡 潜力词: {r['potential']}个\n"
-            f"💰 预估可节省: ${r['waste']:,.2f}\n"
+            f"❌ 否词推荐: {r['neg_count']}个  |  💰 可节省: ${r['neg_waste']:,.2f}\n"
             f"─────────────────────────────\n"
             f"报告已保存: {path}")
         self.result_text.config(state='disabled')
